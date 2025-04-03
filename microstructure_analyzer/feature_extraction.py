@@ -250,6 +250,83 @@ def advanced_features(region, neighbors):
     return features
 
 
+# ======================== Per-Region Feature Calculation ========================
+
+def calculate_per_region_features(labels, region_type_prefix):
+    """
+    Calculates detailed features for each individual region in a labeled image.
+
+    Args:
+        labels (np.ndarray): Labeled image (e.g., grains).
+        region_type_prefix (str): Prefix related to the region type (e.g., "grain_").
+
+    Returns:
+        list: A list of dictionaries. Each dictionary contains features for one region,
+              including 'label', 'centroid_y', 'centroid_x', and calculated features.
+              Returns empty list if no regions.
+    """
+    regions = measure.regionprops(labels, coordinates='rc') # Get row, col coordinates
+    if not regions:
+        return []
+
+    # Analyze topology once for all regions in this label map
+    try:
+        topo_analyzer = TopologyAnalyzer(labels)
+    except Exception as e:
+        print(f"Warning: TopologyAnalyzer failed for {region_type_prefix}: {e}. Topological features will be missing.")
+        topo_analyzer = None # Proceed without topology if it fails
+
+    all_region_details = []
+    for region in regions:
+        label = region.label
+        region_details = {'label': label} # Start with the label
+
+        # Add centroid
+        centroid_y, centroid_x = region.centroid
+        region_details['centroid_y'] = centroid_y
+        region_details['centroid_x'] = centroid_x
+
+        # Get neighbors for this region
+        if topo_analyzer:
+            neighbor_indices = np.where(topo_analyzer.adjacency_matrix[label] > 0)[0]
+            neighbors = [r for r in regions if r.label in neighbor_indices and r.label != label]
+        else:
+            neighbors = [] # Empty list if topology failed
+
+        # Calculate features for the single region
+        try:
+            geo_feat = geometric_features(region)
+            adv_feat = advanced_features(region, neighbors)
+            topo_feat = topo_analyzer.get_grain_topology_features(label) if topo_analyzer else {}
+
+            # Combine features, handling potential overlaps if necessary
+            combined = {**geo_feat, **adv_feat, **topo_feat}
+
+            # Add combined features to the region's details dictionary
+            # Handle array-like features (e.g., Hu moments) by expanding them
+            for key, value in combined.items():
+                if isinstance(value, (list, tuple, np.ndarray)):
+                    for idx, elem in enumerate(value):
+                        try:
+                            region_details[f"{key}_{idx}"] = float(elem)
+                        except (ValueError, TypeError):
+                            region_details[f"{key}_{idx}"] = 0.0 # Default value
+                else:
+                    try:
+                        region_details[key] = float(value) # Converts bools to 0.0/1.0
+                    except (ValueError, TypeError):
+                        region_details[key] = 0.0 # Default value
+
+        except Exception as e:
+            print(f"Warning: Feature calculation failed for region {label} ({region_type_prefix}): {e}")
+            # Add placeholder values or skip features on error? Add placeholders for now.
+            # This part could be more robust by listing expected features and filling NaNs.
+
+        all_region_details.append(region_details)
+
+    return all_region_details
+
+
 # ======================== Feature Aggregation and Statistics ========================
 
 def calculate_region_features_stats(labels, region_type_prefix):
@@ -265,48 +342,20 @@ def calculate_region_features_stats(labels, region_type_prefix):
         dict: Dictionary where keys are feature names (e.g., "thinw_area_mean")
               and values are the calculated statistics. Returns empty dict if no regions.
     """
-    regions = measure.regionprops(labels)
-    if not regions:
+    # Get per-region features first
+    all_region_details = calculate_per_region_features(labels, region_type_prefix)
+    if not all_region_details:
         return {}
 
-    topo_analyzer = TopologyAnalyzer(labels) # Analyze topology of the input labels
-
-    all_region_features = []
-    for region in regions:
-        label = region.label
-        # Get neighbors for this region based on the current label map's topology
-        neighbor_indices = np.where(topo_analyzer.adjacency_matrix[label] > 0)[0]
-        # Map neighbor indices back to region objects (handle potential index errors)
-        neighbors = [r for r in regions if r.label in neighbor_indices and r.label != label]
-
-        # Calculate features for the single region
-        geo_feat = geometric_features(region)
-        adv_feat = advanced_features(region, neighbors)
-        topo_feat = topo_analyzer.get_grain_topology_features(label) # Get topology for this specific region
-
-        # Combine features for this region
-        combined = {**geo_feat, **adv_feat, **topo_feat}
-        all_region_features.append(combined)
-
     # Aggregate features into lists for statistical calculation
+    # Exclude 'label', 'centroid_y', 'centroid_x' from stats calculation
     feature_values = defaultdict(list)
-    for region_feat_dict in all_region_features:
-        for key, value in region_feat_dict.items():
-            if isinstance(value, (list, tuple, np.ndarray)):
-                # Expand array-like features (e.g., Hu moments)
-                for idx, elem in enumerate(value):
-                    try:
-                         feature_values[f"{key}_{idx}"].append(float(elem))
-                    except (ValueError, TypeError):
-                         # print(f"Warning: Could not convert element {idx} of feature '{key}' to float.")
-                         feature_values[f"{key}_{idx}"].append(0.0) # Default value
-            else:
-                # Handle scalar features (including bools)
-                try:
-                    feature_values[key].append(float(value)) # Converts bools to 0.0/1.0
-                except (ValueError, TypeError):
-                    # print(f"Warning: Could not convert feature '{key}' value '{value}' to float.")
-                    feature_values[key].append(0.0) # Default value
+    excluded_keys = {'label', 'centroid_y', 'centroid_x'}
+    for region_detail_dict in all_region_details:
+        for key, value in region_detail_dict.items():
+            if key not in excluded_keys:
+                 # Assuming values are already float/numeric from calculate_per_region_features
+                 feature_values[key].append(value)
 
     # Calculate statistics (mean, std) for each feature
     final_stats = {}
@@ -419,15 +468,20 @@ def calculate_global_features(labels):
 
 # ======================== Main Calculation Workflow ========================
 
-def calculate_features_for_maskfile(mask_file_path):
+def calculate_features_for_maskfile(mask_file_path, save_details=False, details_folder=None):
     """
-    Calculates all features for a single .mask file.
+    Calculates all aggregate features for a single .mask file and optionally saves
+    per-grain details to a separate CSV file.
 
     Args:
         mask_file_path (str): Path to the .mask file.
+        save_details (bool): If True, save per-grain details to a CSV file. Defaults to False.
+        details_folder (str, optional): Directory to save the per-grain details CSV.
+                                        If None, saves in the same directory as the mask file.
+                                        Defaults to None.
 
     Returns:
-        pd.DataFrame: A DataFrame containing all calculated features for this file,
+        pd.DataFrame: A DataFrame containing all calculated aggregate features for this file,
                       with the index set based on the filename pattern.
                       Returns an empty DataFrame if processing fails.
     """
@@ -451,8 +505,32 @@ def calculate_features_for_maskfile(mask_file_path):
              print(f"  Failed to generate boundary labels for {mask_file_path}. Skipping.")
              return pd.DataFrame()
 
+        # --- Optional: Calculate and Save Per-Grain Details ---
+        if save_details:
+            print(f"  Calculating per-grain details...")
+            grain_details_list = calculate_per_region_features(grain_labels, region_type_prefix="grain_")
+            if grain_details_list:
+                grain_details_df = pd.DataFrame(grain_details_list)
+                # Determine save path for details file
+                base_name = os.path.splitext(os.path.basename(mask_file_path))[0]
+                details_filename = f"{base_name}_details.csv"
+                if details_folder:
+                    os.makedirs(details_folder, exist_ok=True)
+                    details_save_path = os.path.join(details_folder, details_filename)
+                else:
+                    details_save_path = os.path.join(os.path.dirname(mask_file_path), details_filename)
 
-        # 4. Calculate features for each category
+                try:
+                    grain_details_df.to_csv(details_save_path, index=False)
+                    print(f"  Per-grain details saved to: {details_save_path}")
+                except Exception as e:
+                    print(f"  Warning: Failed to save per-grain details: {e}")
+            else:
+                print("  No per-grain details generated.")
+
+
+        # 4. Calculate Aggregate Features for each category
+        print(f"  Calculating aggregate features...")
         # Global features based on grains
         global_grain_features = calculate_global_features(grain_labels)
 
@@ -465,7 +543,7 @@ def calculate_features_for_maskfile(mask_file_path):
         # Statistics of features for junction regions
         junction_region_stats = calculate_region_features_stats(junction_labels, region_type_prefix="junc_")
 
-        # 5. Combine all features into a single dictionary
+        # 5. Combine all aggregate features into a single dictionary
         all_features_dict = {
             **global_grain_features,
             **grain_region_stats,
@@ -473,7 +551,7 @@ def calculate_features_for_maskfile(mask_file_path):
             **junction_region_stats
         }
 
-        # 6. Create DataFrame and set index based on filename
+        # 6. Create Aggregate Features DataFrame and set index based on filename
         # Extract index name (e.g., sample ID) from filename
         index_name_match = re.match(r"^([^_]+)", os.path.basename(mask_file_path))
         if index_name_match:
@@ -496,17 +574,20 @@ def calculate_features_for_maskfile(mask_file_path):
         return pd.DataFrame()
 
 
-def batch_calculate_features(mask_folder_path):
+def batch_calculate_features(mask_folder_path, save_details=False, details_folder=None):
     """
-    Processes a batch of .mask files in a folder, calculates features for each,
-    and returns a combined DataFrame.
+    Processes a batch of .mask files in a folder, calculates aggregate features for each,
+    optionally saves per-grain details, and returns a combined DataFrame of aggregate features.
 
     Args:
         mask_folder_path (str): Path to the folder containing .mask files
                                 (can have subdirectories).
+        save_details (bool): If True, save per-grain details for each mask file. Defaults to False.
+        details_folder (str, optional): Directory to save the per-grain details CSVs.
+                                        If None, saves next to the mask files. Defaults to None.
 
     Returns:
-        pd.DataFrame: A DataFrame containing features for all processed files.
+        pd.DataFrame: A DataFrame containing aggregate features for all processed files.
                       Index is set based on the first-level subdirectory name
                       or a default name ('root') if masks are in the top level.
     """
@@ -518,18 +599,24 @@ def batch_calculate_features(mask_folder_path):
             if file.endswith('.mask'):
                 mask_path = os.path.join(root, file)
 
-                # Calculate features for the single file
-                features_df = calculate_features_for_maskfile(mask_path)
+                # Calculate aggregate features and optionally save details
+                features_df = calculate_features_for_maskfile(mask_path, save_details=save_details, details_folder=details_folder)
 
                 if not features_df.empty:
-                    # Determine the sample identifier (first-level directory)
-                    relative_root = os.path.relpath(root, mask_folder_path)
-                    if relative_root == '.':
-                        sample_id = 'root' # Default for files in the main folder
-                    else:
-                        sample_id = relative_root.split(os.path.sep)[0]
+                    # Determine the sample identifier (first-level directory or filename base)
+                    # Use filename base as sample ID if no subdirectories, or first subdir name
+                    relative_path = os.path.relpath(mask_path, mask_folder_path)
+                    path_parts = relative_path.split(os.path.sep)
 
-                    # Override the index set in calculate_features_for_maskfile
+                    if len(path_parts) > 1: # Has subdirectories
+                         sample_id = path_parts[0]
+                    else: # File is in the root mask_folder_path
+                         # Use filename without extension as ID, maybe remove suffix like '_0001'
+                         base_name = os.path.splitext(path_parts[0])[0]
+                         id_match = re.match(r"(.+?)(?:_\d+)?$", base_name) # Try to capture base name before potential _number suffix
+                         sample_id = id_match.group(1) if id_match else base_name
+
+                    # Set the index for the aggregate features DataFrame
                     features_df.index = [sample_id]
                     all_features_list.append(features_df)
 
@@ -545,22 +632,31 @@ def batch_calculate_features(mask_folder_path):
 
 # Example usage (if run as a script)
 if __name__ == '__main__':
-    # Example path from notebook - ADJUST AS NEEDED
-    MASK_FOLDER = r'/home/kemove/Desktop/Mag/2-ZH/0-ImageProcessing/20250228/masks'
-    OUTPUT_CSV = 'all_features_py.csv' # Example output filename
+    # Example paths - ADJUST AS NEEDED
+    # These paths likely need to be provided via command-line arguments in run_feature_extraction.py
+    EXAMPLE_MASK_FOLDER = r'path/to/your/masks'
+    EXAMPLE_OUTPUT_CSV = 'results/all_features.csv'
+    EXAMPLE_DETAILS_FOLDER = 'results/per_grain_details' # Example folder for details
 
     print("Running feature extraction module example...")
-    print(f"Input mask folder: {MASK_FOLDER}")
-    print(f"Output CSV: {OUTPUT_CSV}")
+    print(f"Input mask folder: {EXAMPLE_MASK_FOLDER}")
+    print(f"Output aggregate CSV: {EXAMPLE_OUTPUT_CSV}")
+    print(f"Output details folder: {EXAMPLE_DETAILS_FOLDER}")
 
-    if not os.path.isdir(MASK_FOLDER):
-        print(f"Error: Mask folder '{MASK_FOLDER}' not found. Cannot run example.")
+    if not os.path.isdir(EXAMPLE_MASK_FOLDER):
+        print(f"Error: Example mask folder '{EXAMPLE_MASK_FOLDER}' not found. Cannot run example. Please adjust the path.")
     else:
         try:
-            all_features_results = batch_calculate_features(MASK_FOLDER)
+            # Example: Run batch processing and save details
+            all_features_results = batch_calculate_features(
+                EXAMPLE_MASK_FOLDER,
+                save_details=True,
+                details_folder=EXAMPLE_DETAILS_FOLDER
+            )
 
             if not all_features_results.empty:
-                # Save the results
+                # Save the aggregate results
+                os.makedirs(os.path.dirname(EXAMPLE_OUTPUT_CSV), exist_ok=True)
                 all_features_results.to_csv(OUTPUT_CSV)
                 print(f"Successfully saved features to {OUTPUT_CSV}")
                 print("\nFeature DataFrame head:")

@@ -24,6 +24,8 @@ scikit-learn
 xgboost
 shap
 joblib
+matplotlib
+seaborn
 # pingouin - 可选，仅在需要计算 ICC (组内相关系数) 时需要。
 pingouin
 # sam2 - (图像分割依赖) 需要单独安装并配置模型文件，请参考 README 或原始项目说明。

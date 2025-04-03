@@ -20,6 +20,8 @@
     *   进行超参数优化和交叉验证，选择最佳模型。
     *   提取最佳模型的特征重要性。
     *   使用 SHAP 分析解释特征对模型预测的影响，捕捉非线性关系。
+*   **深入可视化分析**: (新增)
+    *   提供脚本 (`degree_dist_analysis/` 目录下) 对晶粒拓扑特征（如邻居数量）进行专门的可视化分析，包括网络图、空间着色图、特征关联图等。
 
 ## 项目结构
 
@@ -38,6 +40,12 @@
 ├── run_analysis.py             # 脚本：执行特征分析与筛选
 ├── run_correlation.py          # 脚本：执行相关性分析
 ├── run_model_analysis.py       # 脚本：执行基于模型的特征分析与解释 (新增)
+├── degree_dist_analysis/       # 目录：包含深入可视化分析脚本 (新增)
+│   ├── visualize_network.py
+│   ├── plot_degree_vs_property.py
+│   ├── visualize_spatial_coloring.py
+│   ├── README.md               # (英文说明)
+│   └── ..._cn.md             # (中文说明)
 └── README.md                   # 本文件
 ```
 
@@ -133,6 +141,12 @@ python run_model_analysis.py --feature_csv <筛选后特征路径> --external_cs
 4.  保存模型比较结果和最佳模型。
 5.  计算并保存最佳模型的特征重要性。
 6.  对最佳模型进行 SHAP 分析并保存图表。
+
+**6. 深入可视化分析 (`degree_dist_analysis/` 目录)** (新增)
+
+为了更深入地理解特征（特别是 `grain_degree_dist_*` 等拓扑特征）的材料学意义，`degree_dist_analysis` 文件夹提供了专门的可视化脚本。这些脚本需要使用 `run_feature_extraction.py` 生成的每个晶粒的详细数据 (`_details.csv`)。
+
+请参考该目录下的 `README.md` (英文) 或 `README_cn.md` (中文) 获取详细的使用方法和结果解释。
 
 ## 注意
 

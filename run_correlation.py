@@ -18,9 +18,9 @@ except ImportError as e:
 def run_correlation_pipeline():
     parser = argparse.ArgumentParser(description="Run Correlation Analysis between Microstructure Features and External Data")
 
-    parser.add_argument('--input_features_csv', required=True, help='Path to the final filtered features CSV file.')
-    parser.add_argument('--external_data_csv', required=True, help='Path to the external data (properties, process, etc.) CSV file.')
-    parser.add_argument('--output_txt', required=True, help='Path to save the correlation analysis results text file.')
+    parser.add_argument('--input_features_csv', required=False, default=r'results\filterd_features.csv', help='Path to the final filtered features CSV file.')
+    parser.add_argument('--external_data_csv', required=False, default=r'data\database-250211.csv', help='Path to the external data (properties, process, etc.) CSV file.')
+    parser.add_argument('--output_txt', required=False, default=r'results\correlation_results.txt', help='Path to save the correlation analysis results text file.')
 
     # Define target column groups as arguments (optional, could also be hardcoded or read from config)
     # Example: --targets_props Br20 Hc20 Hc147 Hr20 Hr147 --targets_pps C F J L ...

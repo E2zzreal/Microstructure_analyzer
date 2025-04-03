@@ -21,14 +21,23 @@ def run_feature_extraction_pipeline():
     # Changed required=True to required=False and added r prefix to default path
     parser.add_argument('--mask_dir', required=False, default = r'D:\TTRS\1-mag\2-ZH\0-ImageProcessing\2-Data\2-SEM\corrosed\20250228\test', help='Directory containing input .mask files.')
     # Changed required=True to required=False and added r prefix to default path
-    parser.add_argument('--output_csv', required=False, default=r'results\all_features.csv', help='Path to save the extracted features CSV file.')
+    parser.add_argument('--output_csv', required=False, default=r'results\results.csv', help='Path to save the aggregate extracted features CSV file.')
+    # New arguments for saving per-grain details
+    parser.add_argument('--save_grain_details', action='store_true', help='If set, save detailed features for each grain to separate CSV files.')
+    parser.add_argument('--details_output_dir', default=r'results\per_grain_details', help='Directory to save the per-grain detail CSV files (used only if --save_grain_details is set).')
 
     args = parser.parse_args()
 
     print("--- Starting Feature Extraction ---")
     start_time = time.time()
     print(f"Input Mask Directory: {args.mask_dir}")
-    print(f"Output Features CSV: {args.output_csv}")
+    print(f"Output Aggregate Features CSV: {args.output_csv}")
+    if args.save_grain_details:
+        print(f"Saving Per-Grain Details: Yes")
+        print(f"Details Output Directory: {args.details_output_dir}")
+    else:
+        print(f"Saving Per-Grain Details: No")
+
 
     # Validate paths
     if not os.path.isdir(args.mask_dir):
@@ -43,14 +52,22 @@ def run_feature_extraction_pipeline():
     output_dir = os.path.dirname(args.output_csv)
     if output_dir: # Ensure output_dir is not empty (e.g., if filename is in root)
         os.makedirs(output_dir, exist_ok=True)
+    if args.save_grain_details and args.details_output_dir:
+         os.makedirs(args.details_output_dir, exist_ok=True)
+
 
     try:
-        features_df = batch_calculate_features(args.mask_dir)
+        # Pass the new arguments to batch_calculate_features
+        features_df = batch_calculate_features(
+            args.mask_dir,
+            save_details=args.save_grain_details,
+            details_folder=args.details_output_dir
+        )
 
         if not features_df.empty:
             features_df.to_csv(args.output_csv)
-            print(f"\nFeatures successfully extracted and saved to: {args.output_csv}")
-            print(f"DataFrame shape: {features_df.shape}")
+            print(f"\nAggregate features successfully extracted and saved to: {args.output_csv}")
+            print(f"Aggregate DataFrame shape: {features_df.shape}")
         else:
             print("\nWarning: No features were extracted (possibly no valid .mask files found or processed).")
 
