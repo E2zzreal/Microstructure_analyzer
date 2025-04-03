@@ -327,28 +327,47 @@ def perform_shap_analysis(model, X_rfe, feature_names, output_dir, model_name):
 
         end_time = time.time()
         print(f"SHAP values calculated in {end_time - start_time:.2f} seconds.")
+        print(f"  SHAP values type: {type(shap_values)}, Shape: {getattr(shap_values, 'shape', 'N/A')}") # Added type/shape logging
 
-        # Ensure shap_values is compatible with plotting functions
-        # KernelExplainer might return a single array, TreeExplainer might too for single output regression
-        if isinstance(shap_values, list) and len(shap_values) == 1:
-             shap_values = shap_values[0] # Adjust if explainer returns list for single output
+        # --- Validate SHAP values ---
+        if not isinstance(shap_values, np.ndarray):
+            print(f"Error: SHAP values are not a numpy array (type: {type(shap_values)}). Cannot proceed with plotting.")
+            return # Exit SHAP analysis if values are not array
 
-        # Create SHAP Explanation object if needed (newer SHAP versions prefer this)
-        try:
-             shap_explanation = shap.Explanation(values=shap_values,
-                                                  base_values=explainer.expected_value if hasattr(explainer, 'expected_value') else 0, # Provide base value if available
-                                                  data=X_rfe.values, # Use numpy array for data
-                                                  feature_names=feature_names)
-        except Exception:
-             # Fallback for older versions or if Explanation fails
-             shap_explanation = shap_values # Use raw values
+        if shap_values.ndim == 1:
+             # If shap_values is 1D, try reshaping based on X_rfe shape.
+             # This might happen with some explainers or single-output models.
+             if shap_values.shape[0] == X_rfe.shape[0] * X_rfe.shape[1]: # Check if it's a flattened array
+                  try:
+                       shap_values = shap_values.reshape(X_rfe.shape)
+                       print(f"  Reshaped 1D SHAP values to: {shap_values.shape}")
+                  except ValueError:
+                       print(f"Error: Cannot reshape SHAP values (shape {shap_values.shape}) to match features shape {X_rfe.shape}.")
+                       return
+             elif shap_values.shape[0] == X_rfe.shape[0]: # Might be base values or single feature importance?
+                  print(f"Warning: SHAP values are 1D with shape {shap_values.shape}, which might not be suitable for summary plots expecting (n_samples, n_features).")
+                  # Decide how to handle: maybe skip plotting or try specific plots? For now, we'll try to proceed but warn.
+             else:
+                  print(f"Error: SHAP values are 1D with unexpected shape {shap_values.shape}. Cannot proceed.")
+                  return
 
+        elif shap_values.ndim == 2:
+             # Check if shape matches (samples, features)
+             if shap_values.shape != X_rfe.shape:
+                  print(f"Warning: SHAP values shape {shap_values.shape} does not match features shape {X_rfe.shape}. Plotting might be incorrect.")
+                  # Proceed with caution
+        else:
+             print(f"Error: SHAP values have unexpected dimensions: {shap_values.ndim}. Cannot proceed.")
+             return
+
+        # --- Plotting (directly use validated shap_values array) ---
 
         # 1. SHAP Summary Plot (Beeswarm)
         print("Generating SHAP summary plot...")
         plt.figure()
         try:
-             shap.summary_plot(shap_explanation, X_rfe, plot_type="dot", show=False)
+             # Directly use the validated shap_values numpy array and X_rfe DataFrame
+             shap.summary_plot(shap_values, X_rfe, plot_type="dot", show=False)
              plt.title(f'SHAP Summary Plot ({model_name})')
              plt.tight_layout()
              plot_path = os.path.join(output_dir, f'{model_name}_shap_summary.png')
@@ -357,6 +376,7 @@ def perform_shap_analysis(model, X_rfe, feature_names, output_dir, model_name):
              print(f"SHAP summary plot saved to: {plot_path}")
         except Exception as e:
              print(f"Error generating SHAP summary plot: {e}")
+             # Ensure plot is closed even on error
              plt.close()
 
 
@@ -364,7 +384,8 @@ def perform_shap_analysis(model, X_rfe, feature_names, output_dir, model_name):
         print("Generating SHAP feature importance plot...")
         plt.figure()
         try:
-             shap.summary_plot(shap_explanation, X_rfe, plot_type="bar", show=False)
+             # Directly use the validated shap_values numpy array and X_rfe DataFrame
+             shap.summary_plot(shap_values, X_rfe, plot_type="bar", show=False)
              plt.title(f'SHAP Feature Importance ({model_name})')
              plt.tight_layout()
              plot_path = os.path.join(output_dir, f'{model_name}_shap_feature_importance.png')
@@ -373,10 +394,39 @@ def perform_shap_analysis(model, X_rfe, feature_names, output_dir, model_name):
              print(f"SHAP feature importance plot saved to: {plot_path}")
         except Exception as e:
              print(f"Error generating SHAP feature importance plot: {e}")
+             # Ensure plot is closed even on error
              plt.close()
 
         # (Optional) Dependence Plots for top N features
-        # n_dependence_plots = 5
+        # Ensure shap_values is 2D before calculating mean abs value per feature
+        if shap_values.ndim == 2:
+             n_dependence_plots = min(5, X_rfe.shape[1]) # Plot for top 5 or fewer features
+             print(f"Generating SHAP dependence plots for top {n_dependence_plots} features...")
+             importance_shap_df = pd.DataFrame({
+                 'Feature': feature_names,
+                 'MeanAbsSHAP': np.abs(shap_values).mean(axis=0)
+             }).sort_values(by='MeanAbsSHAP', ascending=False)
+
+             for feature in importance_shap_df['Feature'].head(n_dependence_plots):
+                  try:
+                       plt.figure()
+                       # Directly use shap_values array
+                       shap.dependence_plot(feature, shap_values, X_rfe, interaction_index="auto", show=False)
+                       plt.title(f'SHAP Dependence Plot for {feature} ({model_name})')
+                       plt.tight_layout()
+                       plot_path = os.path.join(output_dir, f'{model_name}_shap_dependence_{feature}.png')
+                       plt.savefig(plot_path)
+                       plt.close()
+                       print(f"  Saved dependence plot for: {feature}")
+                  except Exception as e:
+                       print(f"Error generating SHAP dependence plot for {feature}: {e}")
+                       plt.close()
+        else:
+             print("Skipping dependence plots as SHAP values are not 2D.")
+
+
+    except Exception as e:
+        print(f"Error during SHAP analysis: {e}")
         # print(f"Generating SHAP dependence plots for top {n_dependence_plots} features...")
         # importance_shap_df = pd.DataFrame({
         #     'Feature': feature_names,
