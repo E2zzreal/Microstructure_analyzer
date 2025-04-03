@@ -379,7 +379,7 @@ def calculate_persistence_homology(labels, max_dist_thresh=100):
     centroids = np.array([r.centroid for r in regions])
 
     try:
-        rips = Rips(maxdim=1, thresh=max_dist_thresh) # H0 (connected components), H1 (loops)
+        rips = Rips(maxdim=1, thresh=max_dist_thresh, verbose=False) # Set verbose=False
         diagrams = rips.fit_transform(centroids)
 
         # H0 features (connected components persistence)

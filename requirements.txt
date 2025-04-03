@@ -1,0 +1,30 @@
+numpy
+opencv-python
+
+# --- PyTorch (CPU Version Recommended for Compatibility) ---
+# 重要：请不要直接通过 pip install -r requirements.txt 安装 torch。
+# 请访问 https://pytorch.org/get-started/locally/ 选择您的系统和 CPU 计算平台，
+# 然后复制并运行官网提供的特定 pip 安装命令。
+# 例如 (请使用官网最新命令):
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+# 安装完 PyTorch CPU 版本后，再运行 pip install -r requirements.txt 安装其余依赖。
+torch
+# torchvision
+# torchaudio
+
+# --- Other Dependencies ---
+msgpack
+msgpack-numpy
+pandas
+scikit-image
+scipy
+networkx
+ripser
+scikit-learn
+xgboost
+shap
+joblib
+# pingouin - 可选，仅在需要计算 ICC (组内相关系数) 时需要。
+pingouin
+# sam2 - (图像分割依赖) 需要单独安装并配置模型文件，请参考 README 或原始项目说明。
+# 可能需要从特定来源安装，例如：pip install git+https://github.com/facebookresearch/segment-anything-2.git
