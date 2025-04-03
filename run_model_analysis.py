@@ -407,8 +407,8 @@ def perform_shap_analysis(model, X_rfe, feature_names, output_dir, model_name):
 
 def main():
     parser = argparse.ArgumentParser(description="Run Model-Based Feature Analysis")
-    parser.add_argument('--feature_csv', required=True, help='Path to input CSV file with filtered features (e.g., output of run_analysis.py).')
-    parser.add_argument('--external_csv', required=True, help='Path to external data CSV (containing target variable).')
+    parser.add_argument('--feature_csv', required=False, default=r'results\filterd_features.csv', help='Path to input CSV file with filtered features (e.g., output of run_analysis.py).')
+    parser.add_argument('--external_csv', required=False, default=r'data\database-250211.csv', help='Path to external data CSV (containing target variable).')
     parser.add_argument('--target_col', default=DEFAULT_TARGET_COL, help=f'Name of the target variable column (default: {DEFAULT_TARGET_COL}).')
     parser.add_argument('--output_dir', default=DEFAULT_OUTPUT_DIR, help=f'Directory to save results (default: {DEFAULT_OUTPUT_DIR}).')
     parser.add_argument('--cv_folds', type=int, default=DEFAULT_CV_FOLDS, help=f'Number of folds for cross-validation (default: {DEFAULT_CV_FOLDS}).')

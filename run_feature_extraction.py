@@ -21,7 +21,7 @@ def run_feature_extraction_pipeline():
     # Changed required=True to required=False and added r prefix to default path
     parser.add_argument('--mask_dir', required=False, default = r'D:\TTRS\1-mag\2-ZH\0-ImageProcessing\2-Data\2-SEM\corrosed\20250228\test', help='Directory containing input .mask files.')
     # Changed required=True to required=False and added r prefix to default path
-    parser.add_argument('--output_csv', required=False, default=r'results\results.csv', help='Path to save the extracted features CSV file.')
+    parser.add_argument('--output_csv', required=False, default=r'results\all_features.csv', help='Path to save the extracted features CSV file.')
 
     args = parser.parse_args()
 

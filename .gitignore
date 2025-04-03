@@ -86,6 +86,10 @@ venv.bak/
 *.png
 *.pptx
 *.log
+*.xlsx
+*.joblib
+*.pkl
+*.txt
 
 # Specific project outputs (adjust as needed)
 # /microstructure_analyzer/masks/  # Example if masks are saved within the project dir

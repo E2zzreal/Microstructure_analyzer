@@ -22,8 +22,8 @@ except ImportError as e:
 def run_analysis_pipeline():
     parser = argparse.ArgumentParser(description="Run Microstructure Feature Analysis and Filtering")
 
-    parser.add_argument('--input_csv', required=True, help='Path to the raw extracted features CSV file.')
-    parser.add_argument('--final_output_csv', required=True, help='Path to save the final filtered features (mean per sample) CSV file.')
+    parser.add_argument('--input_csv', required=False, default=r'results\all_features.csv',help='Path to the raw extracted features CSV file.')
+    parser.add_argument('--final_output_csv', required=False, default=r'results\filterd_features.csv', help='Path to save the final filtered features (mean per sample) CSV file.')
     parser.add_argument('--filtered_icc_anova_output', help='(Optional) Path to save intermediate ICC/ANOVA filter results CSV.')
 
     # Filtering parameters
