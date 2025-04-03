@@ -14,6 +14,12 @@
     *   评估特征的内部一致性 (ICC) 和样本间区分性 (ANOVA)。
     *   基于方差和相关性进行特征降维。
 *   **相关性分析**: 将提取的微观结构特征与外部数据（如材料性能、工艺参数）合并，计算相关性。
+*   **模型分析与解释**: (新增)
+    *   使用基于模型的特征筛选方法 (如 RFECV) 进一步精简特征集。
+    *   训练和评估多种回归模型 (如 RandomForest, GradientBoosting, XGBoost, SVR, GPR, Lasso/Ridge) 预测目标变量。
+    *   进行超参数优化和交叉验证，选择最佳模型。
+    *   提取最佳模型的特征重要性。
+    *   使用 SHAP 分析解释特征对模型预测的影响，捕捉非线性关系。
 
 ## 项目结构
 
@@ -31,6 +37,7 @@
 ├── run_feature_extraction.py   # 脚本：执行特征提取
 ├── run_analysis.py             # 脚本：执行特征分析与筛选
 ├── run_correlation.py          # 脚本：执行相关性分析
+├── run_model_analysis.py       # 脚本：执行基于模型的特征分析与解释 (新增)
 └── README.md                   # 本文件
 ```
 
@@ -54,7 +61,8 @@
     ```bash
     pip install -r requirements.txt
     ```
-    *   **SAM2 模型**: 需要下载 SAM2 检查点文件 (`sam2_checkpoint`) 并配置模型配置文件 (`model_cfg`) 的路径。
+    *   **注意**: `requirements.txt` 包含了运行所有脚本所需的主要依赖，包括新增的 `xgboost`, `shap`, `joblib`。请参考文件内的注释，特别是关于 `torch` (CPU 版本) 的安装说明。
+    *   **SAM2 模型**: (仅当运行 `run_segmentation.py` 时需要) 需要下载 SAM2 检查点文件 (`sam2_checkpoint`) 并配置模型配置文件 (`model_cfg`) 的路径。
 
 ## 使用
 
@@ -100,7 +108,31 @@ python run_correlation.py --input_features_csv <最终特征输入路径> --exte
 ```
 *   `--input_features_csv`: 最终筛选特征 CSV 文件路径 (必需, 来自上一步)。
 *   `--external_data_csv`: 包含外部数据 (性能、工艺等) 的 CSV 文件路径 (必需)。
+*   `--input_features_csv`: 最终筛选特征 CSV 文件路径 (必需, 来自上一步)。
+*   `--external_data_csv`: 包含外部数据 (性能、工艺等) 的 CSV 文件路径 (必需)。
 *   `--output_txt`: 保存相关性分析结果的文本文件路径 (必需, 例如 `results/correlations.txt`)。
+
+**5. 模型分析与解释 (`run_model_analysis.py`)** (新增)
+
+此脚本在特征筛选和相关性分析之后运行，用于更深入地理解特征与目标变量之间的关系。
+
+```bash
+python run_model_analysis.py --feature_csv <筛选后特征路径> --external_csv <外部数据路径> [--target_col <目标列名>] [--output_dir <结果保存目录>] [--cv_folds <折数>] [--random_state <随机种子>]
+```
+*   `--feature_csv`: 经过 `run_analysis.py` 筛选后的特征 CSV 文件路径 (必需, 例如 `results/final_features.csv`)。
+*   `--external_csv`: 包含外部数据 (包括目标变量) 的 CSV 文件路径 (必需)。
+*   `--target_col`: (可选) 要预测的目标变量列名，默认为 'Hc20'。
+*   `--output_dir`: (可选) 保存模型分析结果（模型比较、选定特征列表、最佳模型、特征重要性、SHAP 图等）的目录，默认为 `results/model_analysis`。
+*   `--cv_folds`: (可选) 交叉验证的折数，默认为 5。
+*   `--random_state`: (可选) 用于保证结果可复现的随机种子，默认为 42。
+
+脚本执行流程：
+1.  加载并合并数据。
+2.  使用 RFECV (基于 RandomForest) 进行特征筛选。
+3.  在筛选后的特征上训练、调优和评估多种回归模型。
+4.  保存模型比较结果和最佳模型。
+5.  计算并保存最佳模型的特征重要性。
+6.  对最佳模型进行 SHAP 分析并保存图表。
 
 ## 注意
 
