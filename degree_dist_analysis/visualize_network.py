@@ -142,7 +142,7 @@ def visualize_grain_network(mask_path, details_csv_path, output_path,
     # Draw network
     # Note: networkx draws nodes based on (x, y) positions
     nx.draw_networkx_edges(G, pos=node_positions, ax=ax, edge_color='gray', alpha=0.6)
-    nodes = nx.draw_networkx_nodes(G, pos=node_positions, ax=ax, node_list=labels_in_graph,
+    nodes = nx.draw_networkx_nodes(G, pos=node_positions, ax=ax, nodelist=labels_in_graph, # Changed node_list to nodelist
                                    node_size=node_sizes, node_color=node_colors, cmap=cmap, alpha=0.8)
 
     # Add colorbar
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     parser.add_argument('--details_csv', required=True, help='Path to the corresponding _details.csv file.')
     parser.add_argument('--output_path', required=True, help='Path to save the output visualization image.')
     parser.add_argument('--image_path', help='(Optional) Path to the original image (.tif) for background.')
-    parser.add_argument('--distance_threshold', type=float, default=50, help='Max distance for edges in the Delaunay graph (default: 50).')
+    parser.add_argument('--distance_threshold', type=float, default=100, help='Max distance for edges in the Delaunay graph (default: 50).')
     parser.add_argument('--color_feature', default='neighbor_count', help="Feature column from details CSV for node color (default: 'neighbor_count').")
     parser.add_argument('--size_feature', default='area', help="Feature column from details CSV for node size (default: 'area').")
     parser.add_argument('--min_size', type=int, default=10, help='Minimum node size for visualization (default: 10).')

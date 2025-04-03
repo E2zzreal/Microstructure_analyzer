@@ -265,7 +265,8 @@ def calculate_per_region_features(labels, region_type_prefix):
               including 'label', 'centroid_y', 'centroid_x', and calculated features.
               Returns empty list if no regions.
     """
-    regions = measure.regionprops(labels, coordinates='rc') # Get row, col coordinates
+    # Removed coordinates='rc' argument for compatibility with older skimage versions or environment issues
+    regions = measure.regionprops(labels)
     if not regions:
         return []
 
@@ -511,9 +512,12 @@ def calculate_features_for_maskfile(mask_file_path, save_details=False, details_
             grain_details_list = calculate_per_region_features(grain_labels, region_type_prefix="grain_")
             if grain_details_list:
                 grain_details_df = pd.DataFrame(grain_details_list)
-                # Determine save path for details file
+                # Determine save path for details file, including sample ID in filename
                 base_name = os.path.splitext(os.path.basename(mask_file_path))[0]
-                details_filename = f"{base_name}_details.csv"
+                # Get the parent directory name as the sample identifier
+                sample_id = os.path.basename(os.path.dirname(mask_file_path))
+                # Combine sample_id and base_name for a unique filename
+                details_filename = f"{sample_id}_{base_name}_details.csv"
                 if details_folder:
                     os.makedirs(details_folder, exist_ok=True)
                     details_save_path = os.path.join(details_folder, details_filename)

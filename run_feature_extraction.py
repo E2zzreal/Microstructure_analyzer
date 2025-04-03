@@ -19,9 +19,9 @@ def run_feature_extraction_pipeline():
     parser = argparse.ArgumentParser(description="Run Microstructure Feature Extraction")
 
     # Changed required=True to required=False and added r prefix to default path
-    parser.add_argument('--mask_dir', required=False, default = r'D:\TTRS\1-mag\2-ZH\0-ImageProcessing\2-Data\2-SEM\corrosed\20250228\test', help='Directory containing input .mask files.')
+    parser.add_argument('--mask_dir', required=False, default = r'D:\TTRS\1-mag\2-ZH\0-ImageProcessing\2-Data\2-SEM\corrosed\20250228\masks', help='Directory containing input .mask files.')
     # Changed required=True to required=False and added r prefix to default path
-    parser.add_argument('--output_csv', required=False, default=r'results\results.csv', help='Path to save the aggregate extracted features CSV file.')
+    parser.add_argument('--output_csv', required=False, default=r'results\all_features.csv', help='Path to save the aggregate extracted features CSV file.')
     # New arguments for saving per-grain details
     parser.add_argument('--save_grain_details', action='store_true', help='If set, save detailed features for each grain to separate CSV files.')
     parser.add_argument('--details_output_dir', default=r'results\per_grain_details', help='Directory to save the per-grain detail CSV files (used only if --save_grain_details is set).')
