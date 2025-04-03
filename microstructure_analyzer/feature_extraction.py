@@ -11,6 +11,7 @@ import warnings
 from .segmentation import load_masks
 from .topology import TopologyAnalyzer
 from .feature_utils import (
+    build_delaunay_graph, # Need this for per-region degree calculation
     self_similarity_dimension, count_skeleton_branches, calculate_orientation,
     calculate_grain_boundary_properties, calculate_nearest_neighbor_distances,
     calculate_orientation_statistics, calculate_fractal_dimension_on_boundaries,
@@ -270,7 +271,56 @@ def calculate_per_region_features(labels, region_type_prefix):
     if not regions:
         return []
 
-    # Analyze topology once for all regions in this label map
+    # --- Pre-calculate adaptive thresholds and degrees ---
+    # 1. Calculate radius stats (using equivalent diameter)
+    equivalent_diameters = [r.equivalent_diameter for r in regions if r.equivalent_diameter > 0]
+    if equivalent_diameters:
+        radii = np.array(equivalent_diameters) / 2.0
+        mean_radius = np.mean(radii)
+        std_radius = np.std(radii)
+    else:
+        mean_radius = 0
+        std_radius = 0
+        print(f"Warning: Could not calculate radius statistics for {region_type_prefix}. Adaptive thresholds will be 0.")
+
+    # 2. Define all thresholds and their names
+    threshold_configs = []
+    # Fixed thresholds
+    fixed_thresholds = [20, 50, 100, 150]
+    for T in fixed_thresholds:
+        threshold_configs.append({'value': T, 'name': f'fixed_{T}'})
+    # Adaptive thresholds
+    for k in [1, 2, 4, 6, 8]:
+        for i in [0, 0.5, 1, 1.5, 2]:
+            T_adaptive = max(0, k * mean_radius + i * std_radius) # Ensure threshold is non-negative
+            name_adaptive = f'adaptive_{k}r{str(i).replace(".", "_")}std' # Create valid name
+            threshold_configs.append({'value': T_adaptive, 'name': name_adaptive})
+
+    # 3. Pre-calculate degrees for all thresholds
+    all_degrees = {}
+    centroids_list = [(r.centroid[1], r.centroid[0]) for r in regions] # Get centroids as (x, y)
+    label_to_index = {r.label: i for i, r in enumerate(regions)} # Map label to index
+
+    if len(centroids_list) >= 3:
+        centroids_array = np.array(centroids_list)
+        for config in threshold_configs:
+            T = config['value']
+            name = config['name']
+            try:
+                # Build graph based on indices
+                G_T_indexed = build_delaunay_graph(centroids_array, distance_threshold=T)
+                # Map indexed degrees back to label degrees
+                # Ensure we handle cases where a node might not be in the graph (if isolated)
+                degrees_T = {regions[idx].label: deg for idx, deg in G_T_indexed.degree()}
+                all_degrees[name] = degrees_T
+            except Exception as graph_e:
+                print(f"Warning: Failed to build or get degrees for graph with threshold {name} ({T}): {graph_e}")
+                all_degrees[name] = {} # Store empty dict on error
+    else:
+        print(f"Warning: Less than 3 regions for {region_type_prefix}. Skipping Delaunay degree calculations.")
+    # --- End pre-calculation ---
+
+    # Analyze topology (physical adjacency) once for all regions in this label map
     try:
         topo_analyzer = TopologyAnalyzer(labels)
     except Exception as e:
@@ -322,6 +372,11 @@ def calculate_per_region_features(labels, region_type_prefix):
             print(f"Warning: Feature calculation failed for region {label} ({region_type_prefix}): {e}")
             # Add placeholder values or skip features on error? Add placeholders for now.
             # This part could be more robust by listing expected features and filling NaNs.
+
+        # Add Delaunay degrees for all calculated thresholds
+        for name, degrees_T in all_degrees.items():
+            degree = degrees_T.get(label, 0) # Default to 0 if label not in graph (e.g., due to thresholding)
+            region_details[f'delaunay_degree_{name}'] = degree
 
         all_region_details.append(region_details)
 
@@ -393,8 +448,25 @@ def calculate_global_features(labels):
 
     # 1. Basic Grain Statistics
     features['num_grains'] = len(regions)
-    features['area_mean'] = np.mean(areas) if areas else 0.0
-    features['area_std'] = np.std(areas) if areas else 0.0
+    features['num_grains'] = len(regions)
+    if areas:
+         features['area_mean'] = np.mean(areas)
+         features['area_std'] = np.std(areas)
+         # Calculate mean radius and std radius based on equivalent diameter for adaptive thresholds
+         equivalent_diameters = [r.equivalent_diameter for r in regions if r.equivalent_diameter > 0]
+         if equivalent_diameters:
+              radii = np.array(equivalent_diameters) / 2.0
+              mean_radius = np.mean(radii)
+              std_radius = np.std(radii)
+         else:
+              mean_radius = 0
+              std_radius = 0
+    else:
+         features['area_mean'] = 0.0
+         features['area_std'] = 0.0
+         mean_radius = 0
+         std_radius = 0
+
 
     # 2. Boundary and Curvature (using helper)
     total_boundary_length, mean_curvature = calculate_grain_boundary_properties(labels)
@@ -424,11 +496,29 @@ def calculate_global_features(labels):
     features['persistence_H0_mean'] = persistence_0_mean
     features['persistence_H1_mean'] = persistence_1_mean
 
-    # 7. Grain Network Features (using helper for different thresholds)
-    for threshold in [20, 50, 100, 150]:
-        network_features = calculate_grain_network_features(labels, distance_threshold=threshold)
-        # Add prefix to avoid name collisions if needed, or just update
-        features.update(network_features) # Keys already include threshold
+    # 7. Grain Network Features (using helper for fixed and adaptive thresholds)
+    # Fixed thresholds
+    fixed_thresholds = [20, 50, 100, 150]
+    for T in fixed_thresholds:
+        try:
+            # Call helper without threshold_name, it will use the number as suffix
+            network_features = calculate_grain_network_features(labels, distance_threshold=T, threshold_name=None) # Explicitly None
+            features.update(network_features)
+        except Exception as e:
+            print(f"Warning: Failed calculating network features for fixed threshold {T}: {e}")
+
+    # Adaptive thresholds
+    for k in [1, 2, 4, 6, 8]:
+        for i in [0, 0.5, 1, 1.5, 2]:
+            try:
+                T_adaptive = max(0, k * mean_radius + i * std_radius)
+                name_adaptive = f'adaptive_{k}r{str(i).replace(".", "_")}std'
+                # Call helper with threshold_name
+                network_features = calculate_grain_network_features(labels, distance_threshold=T_adaptive, threshold_name=name_adaptive)
+                features.update(network_features)
+            except Exception as e:
+                 print(f"Warning: Failed calculating network features for adaptive threshold {name_adaptive}: {e}")
+
 
     # 8. Statistics of Per-Grain Shape Features (using helpers)
     shape_feature_lists = defaultdict(list)

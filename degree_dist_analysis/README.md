@@ -15,8 +15,11 @@ python ../run_feature_extraction.py --mask_dir <your_mask_dir> --output_csv <agg
 Detailed instructions for each script can be found in their respective markdown files:
 
 *   **[`visualize_network.py`](visualize_network.md)**: Visualizes the grain connectivity network overlaid on the microstructure image. Nodes (grains) can be colored and sized based on selected features (e.g., degree, area).
-*   **[`plot_degree_vs_property.py`](plot_degree_vs_property.md)**: Creates scatter plots (or other types like hexbin, kde) to explore the relationship between grain degree (`neighbor_count`) and other geometric or shape properties (e.g., area, aspect ratio).
+*   **[`plot_degree_vs_property.py`](plot_degree_vs_property.md)**: Creates scatter plots (or other types like hexbin, kde) to explore the relationship between grain degree (e.g., `neighbor_count`, `delaunay_degree_*`) and other geometric or shape properties (e.g., area, aspect ratio).
 *   **[`visualize_spatial_coloring.py`](visualize_spatial_coloring.md)**: Generates an image where each grain is colored based on the value of a specific feature (e.g., degree, area, orientation), revealing spatial patterns or clusters.
+*   **[`plot_degree_histogram.py`](plot_degree_histogram.md)** (New): Plots the distribution (histogram or bar chart) of a selected degree feature for a single sample.
+*   **[`compare_degree_distributions.py`](compare_degree_distributions.md)** (New): Compares the degree distributions (using KDE, box plots, etc.) across multiple samples or groups for a selected degree feature.
+*   **[`visualize_degree_outliers.py`](visualize_degree_outliers.md)** (New): Highlights grains with exceptionally high or low degrees on the segmented image.
 
 ## Analysis Workflow & Interpretation
 
@@ -28,8 +31,17 @@ Detailed instructions for each script can be found in their respective markdown 
     *   **Interpretation**: Observe differences in network topology. Does the high-performing sample show a more uniform network? Are high-degree nodes clustered? Does node size correlate visually with degree?
 4.  **Analyze Degree vs. Property (`plot_degree_vs_property.py`)**:
     *   Run the script for representative samples, plotting `neighbor_count` against other potentially relevant features (e.g., `area`, `aspect_ratio`).
-    *   **Interpretation**: Look for trends. Do smaller grains tend to have higher degrees? Is there a relationship between shape and connectivity? How does this relationship differ between high/low performing samples?
+    *   **Interpretation**: Look for trends. Do smaller grains tend to have higher degrees (based on a specific threshold)? Is there a relationship between shape and connectivity? How does this relationship differ between high/low performing samples?
 5.  **Visualize Spatial Patterns (`visualize_spatial_coloring.py`)**:
-    *   Run the script coloring grains by `neighbor_count` or other important features.
+    *   Run the script coloring grains by an important degree feature (e.g., `delaunay_degree_adaptive_1r1std`) or other relevant features.
     *   **Interpretation**: Look for spatial clustering of high/low degree grains. Are grains with specific connectivity patterns located near certain boundaries or defects (if visible in the original image)?
-6.  **Synthesize Findings**: Combine the visual insights with the quantitative results from SHAP analysis (especially dependence plots) to build a stronger understanding of how specific topological arrangements (captured by degree distribution and related features) influence the material's properties. This understanding can guide efforts to engineer microstructures with desired characteristics for improved performance (materials inverse design).
+6.  **Analyze Degree Distribution (`plot_degree_histogram.py`)**:
+    *   Generate histograms for important degree features (e.g., physical `neighbor_count`, adaptive Delaunay degrees) for representative samples.
+    *   **Interpretation**: Characterize the shape of the distribution (e.g., unimodal, bimodal, skewed). What is the most common degree? How wide is the distribution?
+7.  **Compare Distributions (`compare_degree_distributions.py`)**:
+    *   Compare the degree distributions (using KDE or box plots) between high-performing and low-performing sample groups for the most relevant degree features.
+    *   **Interpretation**: Are there statistically significant differences in the distribution shapes, means, or variances between the groups? This provides strong evidence for the role of connectivity patterns.
+8.  **Identify Outliers (`visualize_degree_outliers.py`)**:
+    *   Highlight grains with unusually low or high connectivity based on a chosen degree feature.
+    *   **Interpretation**: Examine the location and characteristics of these outlier grains. Are they associated with specific phases, defects, or boundary types? Do they form clusters?
+9.  **Synthesize Findings**: Combine the visual insights from all plots with the quantitative results from SHAP analysis (especially dependence plots) to build a stronger understanding of how specific topological arrangements (captured by degree distribution and related features) influence the material's properties. This understanding can guide efforts to engineer microstructures with desired characteristics for improved performance (materials inverse design).

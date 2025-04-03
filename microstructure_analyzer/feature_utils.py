@@ -465,34 +465,45 @@ def build_delaunay_graph(centroids, distance_threshold=None):
         return nx.Graph() # Return empty graph on failure
 
 
-def calculate_grain_network_features(labels, distance_threshold=50):
+def calculate_grain_network_features(labels, distance_threshold=50, threshold_name=None):
     """
     Calculates graph-based features from the grain network (Delaunay).
 
     Args:
         labels (np.ndarray): Labeled image.
         distance_threshold (float): Max distance for edges in Delaunay graph.
+        threshold_name (str, optional): A name for the threshold used (e.g., 'fixed_50', 'adaptive_1r0.5std').
+                                        If provided, used in the output feature keys. Defaults to None.
 
     Returns:
         dict: Dictionary containing network features like degree distribution counts,
-              average clustering coefficient, and small-world-ness flag.
+              average clustering coefficient, and small-world-ness flag. Keys will include
+              the threshold_name or distance_threshold value as a suffix.
     """
     features = {}
+    # Determine the suffix for feature keys
+    if threshold_name:
+        suffix = threshold_name
+    else:
+        # Use the numerical threshold, ensuring it's a valid string representation
+        suffix = str(distance_threshold).replace('.', '_') # Replace dots if float
+
     regions = measure.regionprops(labels)
     if len(regions) < 3: # Need enough grains for network analysis
-        # Return default values for all expected features
-        for d in range(9): features[f'degree_dist_{d}_{distance_threshold}'] = 0
-        features[f'avg_clustering_{distance_threshold}'] = 0.0
-        features[f'is_small_world_{distance_threshold}'] = False
+        # Return default values for all expected features using the suffix
+        for d in range(9): features[f'degree_dist_{d}_{suffix}'] = 0
+        features[f'avg_clustering_{suffix}'] = 0.0
+        features[f'is_small_world_{suffix}'] = False
         return features
 
-    centroids = np.array([r.centroid for r in regions])
+    # Use region centroids (y, x) but Delaunay expects (x, y)
+    centroids = np.array([r.centroid[::-1] for r in regions]) # Convert to (x, y)
     G = build_delaunay_graph(centroids, distance_threshold)
 
     if G.number_of_nodes() == 0: # Handle empty graph case
-        for d in range(9): features[f'degree_dist_{d}_{distance_threshold}'] = 0
-        features[f'avg_clustering_{distance_threshold}'] = 0.0
-        features[f'is_small_world_{distance_threshold}'] = False
+        for d in range(9): features[f'degree_dist_{d}_{suffix}'] = 0
+        features[f'avg_clustering_{suffix}'] = 0.0
+        features[f'is_small_world_{suffix}'] = False
         return features
 
 
@@ -500,16 +511,18 @@ def calculate_grain_network_features(labels, distance_threshold=50):
     degrees = dict(G.degree())
     degree_values = list(degrees.values())
     for d in range(9): # Calculate counts for degree 0 through 8
-        features[f'degree_dist_{d}_{distance_threshold}'] = degree_values.count(d)
+        features[f'degree_dist_{d}_{suffix}'] = degree_values.count(d)
 
     # 2. Average Clustering Coefficient
     try:
         avg_clustering = nx.average_clustering(G)
     except ZeroDivisionError:
         avg_clustering = 0.0 # Handle cases with no triangles
-    features[f'avg_clustering_{distance_threshold}'] = avg_clustering
+    features[f'avg_clustering_{suffix}'] = avg_clustering
 
     # 3. Small-World-ness (Compare to random graph)
+    # Note: Small-world calculation can be complex and sensitive.
+    # Keeping the existing logic, but be aware of its limitations.
     is_small_world = False # Default
     if G.number_of_nodes() > 1 and G.number_of_edges() > 0:
         try:
@@ -558,7 +571,7 @@ def calculate_grain_network_features(labels, distance_threshold=50):
             # print(f"Warning: Small-world calculation failed: {e}")
             is_small_world = False # Default to False on error
 
-    features[f'is_small_world_{distance_threshold}'] = is_small_world
+    features[f'is_small_world_{suffix}'] = is_small_world
 
     return features
 
