@@ -46,3 +46,39 @@ python compare_degree_distributions.py --details_folder <path_to_folder_with_det
 *   **Link to Properties/Conditions**: Relate the observed differences in degree distributions to the known differences in material properties (e.g., Hc20) or processing conditions associated with the samples/groups. This helps establish structure-property or processing-structure relationships involving grain topology.
 
 This script facilitates the comparative analysis of grain connectivity patterns, a crucial step in understanding how microstructural topology varies and potentially influences material behavior.
+
+## Plot Type Details
+
+### Kernel Density Estimate (KDE)
+- **Principle**: Shows distribution shape and peaks through data smoothing
+- **Key Interpretation Points**:
+  - Peak position (mode) indicates most frequent degree value
+  - Number of peaks reveals presence of distinct grain connectivity populations
+  - Distribution width reflects dispersion
+  - Curve overlap between groups shows similarity
+- **Best Use Cases**: Comparing overall distribution shapes and peak positions
+
+### Box Plot
+- **Principle**: Displays median, quartiles and potential outliers
+- **Key Interpretation Points**:
+  - Box shows 25th-75th percentiles (IQR)
+  - Center line is the median
+  - Whiskers extend to 1.5×IQR range
+  - Points beyond whiskers are outliers
+- **Best Use Cases**: Quick comparison of central tendency and spread
+
+### Violin Plot
+- **Principle**: Combines features of box plots and KDE
+- **Key Interpretation Points**:
+  - Width represents data density
+  - Typically includes box plot elements inside
+  - Particularly good for showing multimodal distributions
+- **Best Use Cases**: Simultaneous comparison of distribution shape, density and central tendency
+
+### Faceted Histogram
+- **Principle**: Divides data into bins and shows frequencies
+- **Key Interpretation Points**:
+  - Frequency counts per bin
+  - Overall distribution shape (discrete form)
+  - Identifies data gaps or value clusters
+- **Best Use Cases**: Detailed comparison of frequency distributions in specific degree ranges

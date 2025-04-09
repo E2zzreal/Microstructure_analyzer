@@ -81,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument('--details_csv', required=True, help='Path to the input _details.csv file.')
     parser.add_argument('--output_path', required=True, help='Path to save the output plot image.')
     parser.add_argument('--property', default='area', help="Feature column for x-axis (default: 'area').")
-    parser.add_argument('--degree', default='neighbor_count', help="Feature column for y-axis (default: 'neighbor_count').")
+    parser.add_argument('--degree', default='delaunay_degree_adaptive_2r0_5std', help="Feature column for y-axis (default: 'delaunay_degree_adaptive_2r0_5std').")
     parser.add_argument('--plot_type', default='scatter', choices=['scatter', 'hexbin', 'kde'], help="Type of plot (default: 'scatter').")
 
     args = parser.parse_args()

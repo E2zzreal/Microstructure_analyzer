@@ -175,7 +175,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_path', required=True, help='Path to save the output visualization image.')
     parser.add_argument('--image_path', help='(Optional) Path to the original image (.tif) for background.')
     parser.add_argument('--distance_threshold', type=float, default=100, help='Max distance for edges in the Delaunay graph (default: 50).')
-    parser.add_argument('--color_feature', default='neighbor_count', help="Feature column from details CSV for node color (default: 'neighbor_count').")
+    parser.add_argument('--color_feature', default='delaunay_degree_adaptive_2r0_5std', help="Feature column from details CSV for node color (default: 'neighbor_count').")
     parser.add_argument('--size_feature', default='area', help="Feature column from details CSV for node size (default: 'area').")
     parser.add_argument('--min_size', type=int, default=10, help='Minimum node size for visualization (default: 10).')
     parser.add_argument('--max_size', type=int, default=500, help='Maximum node size for visualization (default: 500).')

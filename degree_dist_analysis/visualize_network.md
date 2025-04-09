@@ -33,7 +33,7 @@ python visualize_network.py --mask_path <path_to_mask_file> \
 *   `--output_path` (required): Path where the output visualization image (e.g., `.png`) will be saved.
 *   `--image_path` (optional): Path to the original image file (e.g., `.tif`). If provided, the network will be overlaid on this image. Otherwise, it will be overlaid on the segmented grain boundaries.
 *   `--distance_threshold` (optional): Maximum distance (in pixels) between centroids for two grains to be considered connected in the Delaunay graph. Default: `50`. Adjusting this can reveal connectivity at different spatial scales.
-*   `--color_feature` (optional): The name of the column in the `_details.csv` file to use for coloring the nodes (grains). Default: `'neighbor_count'`.
+*   `--color_feature` (optional): The name of the column in the `_details.csv` file to use for coloring the nodes (grains). Default: `'delaunay_degree_adaptive_2r0_5std'`.
 *   `--size_feature` (optional): The name of the column in the `_details.csv` file to use for sizing the nodes (grains). Default: `'area'`. Node sizes are scaled linearly between `--min_size` and `--max_size`.
 *   `--min_size` (optional): Minimum node size in the plot. Default: `10`.
 *   `--max_size` (optional): Maximum node size in the plot. Default: `500`.

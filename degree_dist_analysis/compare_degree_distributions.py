@@ -79,7 +79,11 @@ def compare_degree_distributions(details_folder, output_path, file_pattern='*_de
 
     # --- Plotting ---
     print(f"Generating comparison plot (type: {plot_type}) for degree column: {degree_column}...")
-    plt.figure(figsize=(max(8, len(processed_labels) * 1.5), 6)) # Adjust width based on number of samples
+    # 设置一个合理的最大宽度（例如40英寸）以避免尺寸过大
+    max_width_inches = 40
+    calculated_width = max(8, len(processed_labels) * 1.5)
+    figure_width = min(calculated_width, max_width_inches)
+    plt.figure(figsize=(figure_width, 6))
 
     try:
         if plot_type == 'kde':

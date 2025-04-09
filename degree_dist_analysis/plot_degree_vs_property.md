@@ -25,7 +25,7 @@ python plot_degree_vs_property.py --details_csv <path_to_details_file> \
 *   `--details_csv` (required): Path to the input `_details.csv` file containing per-grain features.
 *   `--output_path` (required): Path where the output plot image (e.g., `.png`) will be saved.
 *   `--property` (optional): The name of the feature column to plot on the x-axis. Default: `'area'`.
-*   `--degree` (optional): The name of the feature column (representing grain degree) to plot on the y-axis. Default: `'neighbor_count'`.
+*   `--degree` (optional): The name of the feature column (representing grain degree) to plot on the y-axis. Default: `'delaunay_degree_adaptive_2r0_5std'`.
 *   `--plot_type` (optional): The type of plot to generate. Options are:
     *   `'scatter'` (default): Shows individual data points. Good for observing raw distribution but can suffer from overplotting with many points.
     *   `'hexbin'`: Aggregates points into hexagonal bins, coloring bins by point density. Good for large datasets to visualize density patterns.

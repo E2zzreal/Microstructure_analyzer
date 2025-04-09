@@ -94,7 +94,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot histogram of grain degrees for a single sample.")
     parser.add_argument('--details_csv', required=True, help='Path to the input _details.csv file.')
     parser.add_argument('--output_path', required=True, help='Path to save the output plot image.')
-    parser.add_argument('--degree_column', default='neighbor_count', help="Column name for degree data (default: 'neighbor_count').")
+    parser.add_argument('--degree_column', default='delaunay_degree_adaptive_2r0_5std', help="Column name for degree data (default: 'delaunay_degree_adaptive_2r0_5std').")
     parser.add_argument('--bin_width', type=int, default=1, help="Width of bins for histogram plot (default: 1).")
     parser.add_argument('--plot_type', default='hist', choices=['hist', 'bar'], help="Type of plot ('hist' or 'bar') (default: 'hist').")
 

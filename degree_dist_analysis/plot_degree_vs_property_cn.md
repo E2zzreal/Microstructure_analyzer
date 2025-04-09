@@ -25,7 +25,7 @@ python plot_degree_vs_property.py --details_csv <详细数据文件路径> \
 *   `--details_csv` (必需): 输入的包含每个晶粒特征的 `_details.csv` 文件路径。
 *   `--output_path` (必需): 输出图表图像（例如 `.png`）的保存路径。
 *   `--property` (可选): 要绘制在 x 轴上的特征列名称。默认值：`'area'` (面积)。
-*   `--degree` (可选): 代表晶粒度数、要绘制在 y 轴上的特征列名称。默认值：`'neighbor_count'` (邻居数量)。
+*   `--degree` (可选): 代表晶粒度数、要绘制在 y 轴上的特征列名称。默认值：`'delaunay_degree_adaptive_2r0_5std'` (邻居数量)。
 *   `--plot_type` (可选): 要生成的图表类型。可选值：
     *   `'scatter'` (默认): 显示单个数据点。适合观察原始分布，但在数据点很多时可能出现过度绘制问题。
     *   `'hexbin'`: 将点聚合到六边形箱中，并根据箱内点的密度进行着色。适合大型数据集以可视化密度模式。

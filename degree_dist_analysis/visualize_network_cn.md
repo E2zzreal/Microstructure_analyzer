@@ -33,7 +33,7 @@ python visualize_network.py --mask_path <掩码文件路径> \
 *   `--output_path` (必需): 输出可视化图像（例如 `.png`）的保存路径。
 *   `--image_path` (可选): 原始图像文件（例如 `.tif`）的路径。如果提供，网络将叠加在此图像上。否则，将叠加在分割后的晶粒边界上。
 *   `--distance_threshold` (可选): 在 Delaunay 图中，两个晶粒质心之间被视为连接的最大距离（像素）。默认值：`50`。调整此值可以揭示不同空间尺度下的连通性。
-*   `--color_feature` (可选): `_details.csv` 文件中用于给节点（晶粒）着色的列名。默认值：`'neighbor_count'` (邻居数量)。
+*   `--color_feature` (可选): `_details.csv` 文件中用于给节点（晶粒）着色的列名。默认值：`'delaunay_degree_adaptive_2r0_5std'` (邻居数量)。
 *   `--size_feature` (可选): `_details.csv` 文件中用于调整节点（晶粒）大小的列名。默认值：`'area'` (面积)。节点大小将在 `--min_size` 和 `--max_size` 之间线性缩放。
 *   `--min_size` (可选): 图中节点的最小尺寸。默认值：`10`。
 *   `--max_size` (可选): 图中节点的最大尺寸。默认值：`500`。
