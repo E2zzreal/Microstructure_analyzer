@@ -254,7 +254,7 @@ def main():
     if not mask_files:
         logging.error(f"No .mask files found recursively in {args.mask_dir}")
         return
-    print(len(mask_files))
+    print(f'total number of masks: {len(mask_files)}')
     for mask_path in mask_files:
         logging.info(f"Processing: {mask_path}")
         process_sample(
