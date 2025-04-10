@@ -1,9 +1,11 @@
 import argparse
+import argparse
 import os
 import sys
 import warnings
 
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors # Import colors module
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -130,7 +132,47 @@ def visualize_grain_network(mask_path, details_csv_path, output_path,
     else:
         node_sizes = [ (min_node_size + max_node_size) / 2 ] * len(labels_in_graph) # Assign average size if all values are same
 
-    node_colors = color_values.tolist()
+    # --- Determine Colormap and Normalization ---
+    is_discrete = False
+    if pd.api.types.is_integer_dtype(color_values) or \
+       (pd.api.types.is_float_dtype(color_values) and (color_values.fillna(-1) == color_values.fillna(-1).astype(int)).all()):
+        # Treat as discrete if integer or float that are all whole numbers
+        unique_vals = np.sort(color_values.dropna().unique().astype(int))
+        n_colors = len(unique_vals)
+        if n_colors > 1:
+            is_discrete = True
+            print(f"Feature '{node_color_feature}' detected as discrete with {n_colors} unique values.")
+            # Choose discrete colormap
+            if n_colors <= 10:
+                cmap_obj = plt.get_cmap('tab10', n_colors)
+            elif n_colors <= 20:
+                cmap_obj = plt.get_cmap('tab20', n_colors)
+            else:
+                print(f"Warning: Too many unique values ({n_colors}) for standard discrete colormaps. Using continuous '{cmap}'.")
+                is_discrete = False # Revert to continuous
+                cmap_obj = plt.get_cmap(cmap)
+                norm = plt.Normalize(vmin=color_values.min(), vmax=color_values.max())
+
+            if is_discrete:
+                # Create boundaries for discrete coloring
+                boundaries = np.concatenate(([unique_vals[0] - 0.5], unique_vals[:-1] + 0.5, [unique_vals[-1] + 0.5]))
+                norm = mcolors.BoundaryNorm(boundaries, cmap_obj.N)
+        else:
+             # Only one unique value, use continuous map but with single color
+             print(f"Feature '{node_color_feature}' has only one unique value. Using single color from '{cmap}'.")
+             cmap_obj = plt.get_cmap(cmap)
+             norm = plt.Normalize(vmin=color_values.min(), vmax=color_values.max())
+
+    else:
+        # Continuous feature
+        print(f"Feature '{node_color_feature}' treated as continuous.")
+        cmap_obj = plt.get_cmap(cmap)
+        norm = plt.Normalize(vmin=color_values.min(), vmax=color_values.max())
+
+    # Map values to colors *before* drawing nodes
+    # Create a ScalarMappable to handle the mapping
+    sm = plt.cm.ScalarMappable(cmap=cmap_obj, norm=norm)
+    rgba_colors = sm.to_rgba(color_values) # Map the actual feature values to RGBA
 
     # --- Plotting ---
     print("Generating plot...")
@@ -140,16 +182,31 @@ def visualize_grain_network(mask_path, details_csv_path, output_path,
     ax.imshow(img_display, cmap='gray' if img_display.ndim == 2 else None)
 
     # Draw network
-    # Note: networkx draws nodes based on (x, y) positions
     nx.draw_networkx_edges(G, pos=node_positions, ax=ax, edge_color='gray', alpha=0.6)
-    nodes = nx.draw_networkx_nodes(G, pos=node_positions, ax=ax, nodelist=labels_in_graph, # Changed node_list to nodelist
-                                   node_size=node_sizes, node_color=node_colors, cmap=cmap, alpha=0.8)
+    # Pass the pre-calculated RGBA colors directly to node_color, remove cmap and norm
+    nodes = nx.draw_networkx_nodes(G, pos=node_positions, ax=ax, nodelist=labels_in_graph,
+                                   node_size=node_sizes, node_color=rgba_colors, alpha=0.8) # Use rgba_colors here
 
-    # Add colorbar
+    # Add colorbar - Use the same ScalarMappable created earlier
     if nodes:
-        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=color_values.min(), vmax=color_values.max()))
-        sm.set_array([])
-        cbar = plt.colorbar(sm, ax=ax, shrink=0.5)
+        # sm = plt.cm.ScalarMappable(cmap=cmap_obj, norm=norm) # Already created above
+        sm.set_array([]) # Pass empty array for ScalarMappable
+
+        if is_discrete and n_colors > 1:
+            # Discrete colorbar
+            cbar = plt.colorbar(sm, ax=ax, shrink=0.5, boundaries=boundaries, ticks=unique_vals)
+            # Ensure ticks are integers if possible
+            try:
+                 cbar.set_ticks(unique_vals.astype(int))
+                 cbar.set_ticklabels(unique_vals.astype(int))
+            except TypeError:
+                 cbar.set_ticks(unique_vals) # Fallback if conversion fails
+                 cbar.set_ticklabels(unique_vals)
+
+        else:
+            # Continuous colorbar (or single value)
+            cbar = plt.colorbar(sm, ax=ax, shrink=0.5)
+
         cbar.set_label(f'Node Color: {node_color_feature}')
     else:
         print("Warning: No nodes drawn.")
