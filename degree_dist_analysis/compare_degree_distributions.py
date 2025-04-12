@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import numpy as np
+import re # Moved import re to top level
 
 warnings.filterwarnings("ignore")
 
@@ -188,8 +189,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Need to import re here if not imported globally
-    import re
+    # import re # Removed import re from here
 
     compare_degree_distributions(
         details_folder=args.details_folder,
